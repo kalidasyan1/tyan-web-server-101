@@ -12,6 +12,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 
 import java.io.File;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -77,7 +78,68 @@ public class FileServer {
 
             String uri = request.uri();
             if (uri.equals("/")) {
-                uri = "/index.html";
+                // Try to serve index.html from resources/webpages first
+                try {
+                    InputStream indexStream = getClass().getClassLoader().getResourceAsStream("webpages/index.html");
+                    if (indexStream != null) {
+                        byte[] content = indexStream.readAllBytes();
+                        indexStream.close();
+
+                        FullHttpResponse response = new DefaultFullHttpResponse(
+                                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                Unpooled.copiedBuffer(content));
+
+                        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
+                        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length);
+
+                        if (HttpUtil.isKeepAlive(request)) {
+                            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+                        }
+
+                        ctx.writeAndFlush(response);
+                        return;
+                    }
+                } catch (Exception e) {
+                    // Fall through to directory listing
+                }
+
+                // If index.html not found in resources, show directory listing
+                sendDirectoryListing(ctx, ".");
+                return;
+            }
+
+            // Handle webpages from resources
+            if (uri.startsWith("/") && uri.contains(".html")) {
+                String resourcePath = "webpages" + uri;
+                try {
+                    InputStream resourceStream = getClass().getClassLoader().getResourceAsStream(resourcePath);
+                    if (resourceStream != null) {
+                        byte[] content = resourceStream.readAllBytes();
+                        resourceStream.close();
+
+                        FullHttpResponse response = new DefaultFullHttpResponse(
+                                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                Unpooled.copiedBuffer(content));
+
+                        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
+                        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.length);
+
+                        if (HttpUtil.isKeepAlive(request)) {
+                            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+                        }
+
+                        ctx.writeAndFlush(response);
+                        return;
+                    }
+                } catch (Exception e) {
+                    // Fall through to file system
+                }
+            }
+
+            // Handle directory listing request
+            if (uri.equals("/files")) {
+                sendDirectoryListing(ctx, ".");
+                return;
             }
 
             // Remove leading slash and sanitize path
@@ -140,6 +202,38 @@ public class FileServer {
             } else {
                 return "application/octet-stream";
             }
+        }
+
+        private void sendDirectoryListing(ChannelHandlerContext ctx, String dir) {
+            File directory = new File(dir);
+            File[] files = directory.listFiles();
+
+            StringBuilder html = new StringBuilder();
+            html.append("<!DOCTYPE html>");
+            html.append("<html><head><title>Directory listing</title></head><body>");
+            html.append("<h3>Directory: ").append(directory.getAbsolutePath()).append("</h3>");
+            html.append("<ul>");
+
+            if (files != null) {
+                for (File file : files) {
+                    String fileName = file.getName();
+                    if (file.isDirectory()) {
+                        html.append("<li><a href=\"").append(fileName).append("/\">").append(fileName).append("/</a></li>");
+                    } else {
+                        html.append("<li><a href=\"").append(fileName).append("\">").append(fileName).append("</a></li>");
+                    }
+                }
+            }
+
+            html.append("</ul>");
+            html.append("</body></html>");
+
+            FullHttpResponse response = new DefaultFullHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                    Unpooled.copiedBuffer(html.toString(), CharsetUtil.UTF_8));
+
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
+            ctx.writeAndFlush(response);
         }
 
         @Override

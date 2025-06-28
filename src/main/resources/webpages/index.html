@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netty File Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .info {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+        }
+        .examples {
+            margin-top: 30px;
+        }
+        .example {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Netty File Server</h1>
+
+        <div class="info">
+            <strong>Welcome!</strong> This is a simple file server built with Netty demonstrating static file serving capabilities.
+        </div>
+
+        <h2>Server Information</h2>
+        <ul>
+            <li><strong>Framework:</strong> Netty (High-performance NIO framework)</li>
+            <li><strong>Port:</strong> 8085</li>
+            <li><strong>Root Directory:</strong> Project root directory</li>
+            <li><strong>Supported Files:</strong> HTML, CSS, JS, Images, and more</li>
+        </ul>
+
+        <h2>Features Demonstrated</h2>
+        <div class="examples">
+            <div class="example">
+                <strong>Chunked File Transfer:</strong> Efficiently serves large files using Netty's ChunkedFile handler
+            </div>
+            <div class="example">
+                <strong>MIME Type Detection:</strong> Automatically sets appropriate Content-Type headers based on file extensions
+            </div>
+            <div class="example">
+                <strong>Error Handling:</strong> Proper HTTP error responses for missing files or invalid requests
+            </div>
+            <div class="example">
+                <strong>Keep-Alive Support:</strong> HTTP/1.1 persistent connections for better performance
+            </div>
+        </div>
+
+        <h2>Try These Examples</h2>
+        <ul>
+            <li>Visit <code>/README.md</code> to view the project documentation</li>
+            <li>Visit <code>/pom.xml</code> to see the Maven configuration</li>
+            <li>Try accessing a non-existent file to see error handling</li>
+            <li><strong><a href="/files">📁 Browse Directory Listing</a></strong> - View all files in the project directory</li>
+        </ul>
+
+        <h2>Architecture</h2>
+        <p>This file server uses Netty's EventLoop architecture for high-performance I/O operations:</p>
+        <ul>
+            <li><strong>Single EventLoop Thread:</strong> All I/O operations for each connection happen on the same thread</li>
+            <li><strong>Non-blocking I/O:</strong> Handles multiple concurrent connections efficiently</li>
+            <li><strong>Zero-copy Transfer:</strong> Uses ChunkedFile for efficient file streaming</li>
+        </ul>
+
+        <div class="info">
+            <strong>Note:</strong> This server serves files from the project root directory.
+            Make sure you understand the security implications in production environments.
+        </div>
+    </div>
+</body>
+</html>
