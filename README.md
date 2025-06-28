@@ -165,4 +165,18 @@ The examples are organized into subdirectories by functionality:
 **Best Practices for Netty:**
 ```java
 // ❌ BAD - Blocks EventLoop thread
-public void ch
+public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    String result = database.query("SELECT * FROM users"); // Blocks entire EventLoop!
+    ctx.writeAndFlush(result);
+}
+
+// ✅ GOOD - Offload blocking work
+public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    businessExecutor.submit(() -> {
+        String result = database.query("SELECT * FROM users");
+        ctx.channel().eventLoop().execute(() -> {
+            ctx.writeAndFlush(result); // Back on EventLoop for I/O
+        });
+    });
+}
+```
