@@ -180,3 +180,47 @@ public void channelRead(ChannelHandlerContext ctx, Object msg) {
     });
 }
 ```
+
+## Architecture Diagrams
+
+The project includes visual diagrams that illustrate the key architectural differences between Netty and Tomcat:
+
+### Netty EventLoop Architecture
+![Netty Same-Threaded Server](src/main/resources/diagrams/Netty-Same-Threaded-Server.png)
+
+**Key Points Illustrated:**
+- **Single EventLoop Thread**: Each EventLoop runs on exactly one thread
+- **Channel Affinity**: Channels are permanently bound to their EventLoop
+- **I/O + Business Logic**: Both network I/O and request processing happen on the same thread
+- **No Thread Handoffs**: Eliminates context switching between I/O detection and processing
+- **Lock-Free Operations**: No synchronization needed for channel-specific operations
+
+### Tomcat NIO Connector Architecture  
+![Tomcat NIO Architecture Part 1](src/main/resources/diagrams/Tomcat-NIO-Connector-Architecture_1.png)
+![Tomcat NIO Architecture Part 2](src/main/resources/diagrams/Tomcat-NIO-Connector-Architecture_2.png)
+
+**Key Points Illustrated:**
+- **Multi-Stage Pipeline**: Acceptor → Poller → Worker Thread Pool
+- **Thread Handoffs**: Requests pass through multiple thread pools
+- **Shared Resources**: Multiple worker threads can access the same socket connection
+- **Synchronization Required**: Concurrent access to sockets needs coordination
+- **Context Switching Overhead**: Thread transitions add latency
+
+### Performance Implications
+
+**Netty's Advantages:**
+- **Lower Latency**: No thread handoffs reduce request processing time
+- **Higher Throughput**: Better CPU cache utilization and fewer context switches
+- **Memory Efficiency**: Thread-local buffers eliminate contention
+- **Predictable Performance**: Single-threaded model avoids lock contention
+
+**Trade-offs to Consider:**
+- **Blocking Operations**: Must be carefully managed to avoid EventLoop starvation
+- **CPU-Intensive Tasks**: Should be offloaded to dedicated thread pools
+- **Error Isolation**: One misbehaving handler can affect all channels on an EventLoop
+
+These diagrams help visualize why Netty often outperforms traditional servlet containers for high-concurrency, low-latency applications.
+
+## References
+- [Single-threaded and Same-threaded designs](https://www.youtube.com/watch?v=QrYIOs1dA3M&list=PLL8woMHwr36EDxjUoCzboZjedsnhLP1j4&index=23&ab_channel=JakobJenkov)
+- [BIO-NIO-Connector-in-Tomcat](https://velog.io/@jihoson94/BIO-NIO-Connector-in-Tomcat)
