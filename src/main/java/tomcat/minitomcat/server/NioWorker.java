@@ -24,9 +24,7 @@ public class NioWorker implements Runnable {
       int bytesRead = clientChannel.read(readBuffer);
 
       if (bytesRead == -1) {
-        logger.info("Client disconnected: " + clientChannel.getRemoteAddress());
-        key.cancel();
-        clientChannel.close();
+        onClientDisconnected(clientChannel);
         return;
       } else if (bytesRead == 0) {
         return; // No data to read, return
@@ -42,19 +40,22 @@ public class NioWorker implements Runnable {
       }
       logger.info("Sent response to client: " + clientChannel.getRemoteAddress());
 
-      clientChannel.close();
-      key.cancel();
-      logger.info("Closed connection for client: " + clientChannel.getRemoteAddress());
+      onClientDisconnected(clientChannel);
     } catch (IOException e) {
       logger.warning("Error in NioWorker: " + e.getMessage());
-      if (key.channel() != null) {
-        try {
-          key.channel().close();
-        } catch (IOException closeException) {
-          logger.warning("Failed to close channel: " + closeException.getMessage());
-        }
-      }
-      key.cancel();
+      onClientDisconnected((SocketChannel) key.channel());
+    }
+  }
+
+  /**
+   * Handle client disconnection.
+   */
+  protected void onClientDisconnected(SocketChannel clientChannel) {
+    try {
+      logger.info("Client disconnected: " + clientChannel.getRemoteAddress());
+      clientChannel.close();
+    } catch (IOException e) {
+      logger.warning("Error closing client channel: " + e.getMessage());
     }
   }
 }

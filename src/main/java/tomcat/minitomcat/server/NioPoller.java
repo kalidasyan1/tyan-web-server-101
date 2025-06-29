@@ -43,6 +43,8 @@ public class NioPoller implements Runnable {
           iterator.remove();
 
           if (key.isValid() && key.isReadable()) {
+            // Clear interest ops immediately to prevent multiple notifications
+            key.interestOps(0);
             workerPool.submit(new NioWorker(key));
           }
         }
