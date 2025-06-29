@@ -1,4 +1,88 @@
-# Netty Usage Examples
+# Web Server 101 - Netty & Mini Tomcat Examples
+
+This project contains various examples demonstrating web server implementations, including Netty usage patterns and a custom NIO-based mini Tomcat server.
+
+## Prerequisites
+
+Make sure you have Java 17+ and Maven installed. The Netty dependency is already configured in the `pom.xml` file.
+
+## Project Structure
+
+The project is organized into two main sections:
+- `netty/` - Netty framework usage examples
+- `tomcat/minitomcat/` - Custom NIO-based HTTP server implementation
+
+## Mini Tomcat Implementation
+
+### Overview
+The mini Tomcat server is a custom NIO-based HTTP server implementation that demonstrates the core concepts behind servlet containers like Apache Tomcat. It uses Java NIO (Non-blocking I/O) to handle multiple client connections efficiently with a small number of threads.
+
+### Architecture
+The implementation follows a **Reactor pattern** with the following components:
+
+1. **NioServer** - Main entry point that starts the server components
+2. **NioAcceptor** - Accepts new client connections on a dedicated thread
+3. **NioPoller** - Polls for I/O events using a Java NIO Selector on a dedicated thread
+4. **NioWorker** - Processes individual requests in a thread pool
+5. **NioConnection** - Represents a client connection wrapper
+
+### Key Features
+- **Non-blocking I/O**: Uses Java NIO channels and selectors for efficient I/O operations
+- **Thread separation**: Acceptor, Poller, and Worker threads handle different responsibilities
+- **Connection pooling**: Worker threads are managed in a thread pool for request processing
+- **HTTP support**: Handles basic HTTP requests and responses
+
+### Running the Mini Tomcat Server
+```bash
+# Compile the project
+mvn compile
+
+# Run the server
+mvn exec:java -Dexec.mainClass="tomcat.minitomcat.server.NioServer"
+
+# Test with the Python client
+python src/main/python/client/client_normal.py
+```
+
+The server runs on port 8090 and responds with "Hello, World!" to all HTTP requests.
+
+### Key Learning: NIO Selector Race Condition
+
+During development, we encountered a critical issue where a single client request would cause the NIO selector to be notified multiple times, leading to duplicate request processing.
+
+#### The Problem
+When a client sent one HTTP request, the `selector.select()` method would return 1 (indicating one ready channel) at least 3 times for the same request. This violated the expected behavior where `select()` should only return channels that became ready since the last call.
+
+#### Root Cause Analysis
+The issue was a **race condition** between the poller thread and worker threads:
+
+1. Client sends request → Channel becomes readable → `selector.select()` returns 1
+2. NioPoller submits `SelectionKey` to worker thread pool asynchronously
+3. **While worker is processing**, the poller continues polling
+4. The same channel **remains registered with `OP_READ` interest**
+5. `selector.select()` detects the same channel as readable again
+6. This cycle repeats until the worker finally cancels the key
+
+#### The Solution
+The fix was to **immediately clear the interest operations** when submitting a key to the worker pool:
+
+```java
+if (key.isValid() && key.isReadable()) {
+    // Clear interest ops immediately to prevent multiple notifications
+    key.interestOps(0);
+    workerPool.submit(new NioWorker(key));
+}
+```
+
+#### Key Takeaways
+1. **Interest ops management is critical**: Failing to properly manage `SelectionKey` interest operations can lead to spurious notifications
+2. **Async processing requires careful coordination**: When processing is handed off to another thread, the selector state must be updated immediately
+3. **NIO selectors are stateful**: The selector remembers which keys have interest in which operations until explicitly cleared
+4. **Race conditions in NIO**: Multi-threaded NIO applications must carefully coordinate between I/O threads and worker threads
+
+This learning demonstrates the complexity of building efficient NIO-based servers and the importance of proper lifecycle management for selection keys.
+
+## Netty Usage Examples
 
 This directory contains various examples demonstrating basic Netty usage patterns, organized by type.
 
